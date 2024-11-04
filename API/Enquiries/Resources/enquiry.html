@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-body {
+        font-family: Arial, sans-serif;
+        color: #333333;
+        padding: 20px;
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        background-color: #1d8aed;
+        color: white;
+        padding: 10px 20px;
+        margin: 20px 0;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 0.8em;
+        color: #666666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-body">
+      <h2>New Enterprise Level Portal Enquiry</h2>
+      <p>First Name: {{first_name}}</p>
+      <p>Last Name: {{last_name}}</p>
+      <p>Organisation Name: {{org_name}}</p>
+      <p>Date Submitted: {{enquiry_date}}</p>
+      <p>Email: {{email}}</p>
+      <p>Website: {{website}}</p>
+      <p>X handle: {{x_handle}}</p>
+      <p>Chains Interested in: {{chains}}</p>
+      <p>Endpoints needed: {{max_endpoints}}</p>
+      <p>Requests per month needed: {{max_requests_per_month}}</p>
+      <p>Requests per day needed: {{max_requests_per_day}}</p>
+      <p>Requests per second needed: {{max_requests_per_second}}</p>
+      <p>Message: {{message}}</p>
+    </div>
+  </body>
+</html>

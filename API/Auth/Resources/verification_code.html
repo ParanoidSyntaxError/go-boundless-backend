@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-body {
+        font-family: Arial, sans-serif;
+        color: #333333;
+        padding: 20px;
+        text-align: center;
+      }
+      .verification-code {
+        display: inline-block;
+        background-color: #b3ff4a;
+        color: white;
+        padding: 15px 30px;
+        margin: 20px 0;
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 5px;
+        border-radius: 5px;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 0.8em;
+        color: #666666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-body">
+      <h2>Welcome!</h2>
+      <p>
+        Thank you for signing up. Please use the verification code below to
+        verify your email address and complete your registration.
+      </p>
+      <div class="verification-code">{{verification_code}}</div>
+      <p>This code will expire in 15 minutes.</p>
+      <div class="footer">
+        If you did not create an account, no further action is required.
+      </div>
+    </div>
+  </body>
+</html>

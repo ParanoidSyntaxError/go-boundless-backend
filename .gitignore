@@ -1,0 +1,14 @@
+.env 
+.venv
+.vscode 
+instance/
+.webassets-cache
+*.exe
+*.dll
+*.bat
+__pycache__/
+**/__pycache__/
+__pycache__
+data.py
+.flaskenv
+venv
