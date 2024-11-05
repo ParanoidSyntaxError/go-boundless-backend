@@ -1,8 +1,8 @@
-from DB import db
+from API.extensions import db
 from datetime import datetime, timezone
 
-class EnquiryModel(db.Model):
-    __tablename__ = "enquiries"
+class SupportModel(db.Model):
+    __tablename__ = "support"
 
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(255), nullable=False)

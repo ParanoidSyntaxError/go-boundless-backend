@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from API.extensions import db, jwt, limiter 
 from API.Auth import UsersBlueprint, UserModel
 from API.Store import StoreBlueprint
+from API.Support import SupportBlueprint
 
 load_dotenv()
 
@@ -109,5 +110,6 @@ def create_flask_app(db_url=None):
 
     api.register_blueprint(UsersBlueprint, url_prefix="/auth")
     api.register_blueprint(StoreBlueprint, url_prefix="/store")
+    api.register_blueprint(SupportBlueprint, url_prefix="/enquiries")
 
     return app

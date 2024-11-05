@@ -2,19 +2,16 @@ from flask import jsonify, request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from sqlalchemy.exc import SQLAlchemyError
-from flask_jwt_extended import jwt_required
 
-from DB import db
-from API.Sales.models import EnquiryModel
-from API.Sales.service import send_enquiry
+from API.extensions import db
+from API.Support.models import SupportModel
+from API.Support.service import send_enquiry
 from datetime import datetime, timezone
 
-blp = Blueprint("enquiries", __name__, description="Operations on enquiries")
+blp = Blueprint("support", __name__, description="Operations on support")
 
 @blp.route("/enquiry")
 class Enquiry(MethodView):
-
-    @jwt_required()
     def post(self):
         """
         Create a new enquiry and send an email
@@ -60,7 +57,7 @@ class Enquiry(MethodView):
         """
         enquiry_data = request.get_json()
 
-        new_enquiry = EnquiryModel(
+        new_enquiry = SupportModel(
             first_name=enquiry_data.get("first_name"),
             last_name=enquiry_data.get("last_name"),
             subject=enquiry_data.get("subject"),

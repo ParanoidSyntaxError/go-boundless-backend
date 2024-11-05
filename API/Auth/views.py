@@ -9,6 +9,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token, get_jw
 import bcrypt 
 import random
 import string
+import secrets
 from datetime import datetime, timedelta
 
 from API.extensions import db, limiter
@@ -23,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 blp = Blueprint("users", __name__, description="Operations on users")
 
-## TO DO ADD MARKETING PREFERENCE AND DOB TO REGISTRATION
 @blp.route("/register", methods=["POST"])
 class UserRegister(MethodView):
     def post(self):
@@ -46,7 +46,6 @@ class UserRegister(MethodView):
                 - last_name
                 - country
                 - password
-                - org_name
               properties:
                 email:
                   type: string
@@ -64,6 +63,13 @@ class UserRegister(MethodView):
                 country:
                   type: string
                   example: GB
+                birthdate:
+                  type: string
+                  format: date
+                  example: 1990-01-01
+                marketing_emails:
+                  type: boolean
+                  example: true
         responses:
           201:
             description: User registered successfully.
@@ -82,6 +88,15 @@ class UserRegister(MethodView):
         if UserModel.query.filter(UserModel.email == user_data["email"]).first():
             abort(409, message="Your email is already registered")
 
+        birthdate = user_data.get("birthdate")
+        marketing_emails = user_data.get("marketing_emails", False)
+
+        if birthdate:
+            try:
+                birthdate = datetime.strptime(birthdate, "%Y-%m-%d").date()
+            except ValueError:
+                abort(400, message="Invalid birthdate format. Use YYYY-MM-DD.")
+
         verification_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         verification_code_expiry = datetime.utcnow() + timedelta(minutes=15)
 
@@ -89,15 +104,22 @@ class UserRegister(MethodView):
             email=user_data["email"],
             first_name=user_data["first_name"],
             last_name=user_data["last_name"],
-            password=bcrypt.hashpw(user_data["password"].encode('utf-8'), bcrypt.gensalt()),
+            password=bcrypt.hashpw(user_data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
             role="user",
             verification_code=verification_code,
             verification_code_expiry=verification_code_expiry,
-            country=user_data["country"]
+            country=user_data["country"],
+            birthdate=birthdate,
+            marketing_emails=marketing_emails
         )
 
-        db.session.add(user)
-        db.session.commit()
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            logger.error(f"Database Error: {str(e)}")
+            abort(500, message="An error occurred while registering the user.")
 
         send_verification_code_email(user.email, verification_code)
 
@@ -108,7 +130,7 @@ class UserRegister(MethodView):
 
 @blp.route("/login")
 class UserLogin(MethodView):
-    @limiter.limit("5 per minute")
+    @limiter.limit("10 per minute")
     def post(self, user_data):
         """
         Login as a user and get access tokens.
@@ -150,6 +172,16 @@ class UserLogin(MethodView):
                 return {"access_token": access_token, "refresh_token": refresh_token, "user_id": user.id}
         else:
             abort(401, message="Login details are incorrect")
+
+@blp.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh_token():
+    """
+    Refresh the access token using a valid refresh token.
+    """
+    current_user = get_jwt_identity()
+    new_access_token = create_access_token(identity=current_user, fresh=False)
+    return jsonify(access_token=new_access_token), 200
 
 
 ## TO DO - ADD swagger
@@ -387,28 +419,6 @@ class ResetPassword(MethodView):
         db.session.commit()
 
         return jsonify({"message": "Your password has been updated successfully."}), 200
-
-
-# API/Auth/views.py
-
-import uuid
-import secrets
-from flask import request, jsonify, url_for, current_app
-from flask.views import MethodView
-from flask_smorest import Blueprint, abort
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime, timedelta
-
-from API.extensions import db, limiter
-from API.Auth.models import UserModel 
-from API.Auth.service import send_password_reset_email
-
-import logging
-
-logger = logging.getLogger(__name__)
-
-blp = Blueprint("users", __name__, description="Operations on users")
 
 @blp.route("/forgot-password")
 class ForgotPassword(MethodView):

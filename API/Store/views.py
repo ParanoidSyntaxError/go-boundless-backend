@@ -8,6 +8,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from requests.auth import HTTPBasicAuth 
 import json 
 from API.Store.service import handle_activation 
+from API.Store.store_auth import get_store_access_token
 import logging
 
 ## TO DO - Switch to post requests
@@ -139,24 +140,30 @@ def get_customer(customer_uid):
 ## Get Customers sims
 @blp.route('/customer-activations', methods=['POST'])
 @jwt_required()
-def get_customer_activations():
+def customer_activations():
     user_id = get_jwt_identity()
     user = UserModel.query.filter_by(id=user_id).first()
 
-    if not user or not user.dent_uid:
-        logger.error("User not found or dent_uid not set.")
-        return jsonify({"error": "User not found or dent_uid not set"}), 404
+    if not user:
+        logger.error("User not found.")
+        return jsonify({"error": "User not found"}), 404
+
+    if not user.dent_uid:
+        logger.error("User does not have a dent_uid.")
+        return jsonify({"error": "No product found. Please add a product."}), 400
 
     dent_uid = user.dent_uid
-    access_token = request.headers.get('Authorization')
 
-    if not access_token:
-        return jsonify({"error": "Unauthorized", "message": "Missing access token"}), 401
+    # Get the store access token
+    external_api_access_token = get_store_access_token()
+    if not external_api_access_token:
+        logger.error("Failed to obtain store access token.")
+        return jsonify({"error": "Authentication Error", "message": "Failed to authenticate with external API"}), 500
 
     external_api_url = f'https://api.giga.store/gigastore/activations/customers/{dent_uid}'
 
     headers = {
-        'Authorization': access_token,  
+        'Authorization': f'Bearer {external_api_access_token}',
         'Content-Type': 'application/json',
     }
 
@@ -164,7 +171,7 @@ def get_customer_activations():
         response = requests.get(external_api_url, headers=headers)
         response.raise_for_status()
         data = response.json()
-        return jsonify(data), 200
+        return jsonify({"activatedItems": data}), 200
     except requests.exceptions.HTTPError as errh:
         logger.error(f"HTTP Error: {errh}")
         return jsonify({"error": "HTTP Error", "message": str(errh)}), errh.response.status_code
