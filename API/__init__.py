@@ -13,6 +13,7 @@ from API.Auth import UsersBlueprint, UserModel
 from API.Store import StoreBlueprint
 from API.Support import SupportBlueprint
 
+from config import config
 load_dotenv()
 
 def create_flask_app(db_url=None):
@@ -24,11 +25,13 @@ def create_flask_app(db_url=None):
 
     logger.info("Flask app starting....")
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///data.db"
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["PROPAGATE_EXCEPTIONS"] = True
+    app.config.from_object(config.Config)
 
-    app.config["JWT_SECRET_KEY"] = os.getenv('JWT_SECRET_KEY', 'your_jwt_secret_key')
+    #app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///data.db"
+    #app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    #app.config["PROPAGATE_EXCEPTIONS"] = True
+
+    #app.config["JWT_SECRET_KEY"] = os.getenv('JWT_SECRET_KEY', 'your_jwt_secret_key')
 
     app.config["API_TITLE"] = "Stores REST API"
     app.config["API_VERSION"] = "v1"
