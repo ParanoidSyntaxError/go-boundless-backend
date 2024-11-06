@@ -131,7 +131,7 @@ class UserRegister(MethodView):
 @blp.route("/login")
 class UserLogin(MethodView):
     @limiter.limit("10 per minute")
-    def post(self, user_data):
+    def post(self):
         """
         Login as a user and get access tokens.
 
@@ -159,19 +159,33 @@ class UserLogin(MethodView):
           401:
             description: Invalid credentials.
         """
-        user = UserModel.query.filter(
-            UserModel.email == user_data["email"]
-        ).first()
+        try:
+            user_data = request.get_json()
 
-        if user and bcrypt.checkpw(user_data["password"].encode('utf-8'),user.password.encode('utf-8')):
-            if not user.is_email_verified:
-                abort(403, message="You have not verified your account. Please check your email.")
+            if not user_data or 'email' not in user_data or 'password' not in user_data:
+                abort(400, message="Email and password are required.")
+
+            user = UserModel.query.filter(
+                UserModel.email == user_data["email"]
+            ).first()
+
+            if user and bcrypt.checkpw(user_data["password"].encode('utf-8'), user.password.encode('utf-8')):
+                if not user.is_email_verified:
+                    abort(403, message="You have not verified your account. Please check your email.")
+                else:
+                    access_token = create_access_token(identity=user.id, fresh=True)
+                    refresh_token = create_refresh_token(identity=user.id)
+                    return {
+                        "access_token": access_token,
+                        "refresh_token": refresh_token,
+                        "user_id": user.id,
+                    }, 200
             else:
-                access_token = create_access_token(identity=user.id, fresh=True)
-                refresh_token = create_refresh_token(identity=user.id)
-                return {"access_token": access_token, "refresh_token": refresh_token, "user_id": user.id}
-        else:
-            abort(401, message="Login details are incorrect")
+                abort(401, message="Login details are incorrect")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            abort(500, message="An internal error occurred. Please try again later.")
+
 
 @blp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)

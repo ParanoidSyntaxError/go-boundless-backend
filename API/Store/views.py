@@ -293,7 +293,7 @@ def create_payment_intent():
             payment_method=payment_method_id,
             confirmation_method='manual',
             confirm=True,
-            return_url='http://localhost:5173//payment-success',
+            return_url='http://localhost:5173/payment-success',
             metadata={
                 'inventoryItemId': inventoryItemId,
                 'customerEmail': customerEmail,

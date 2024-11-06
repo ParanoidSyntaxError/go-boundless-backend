@@ -92,9 +92,11 @@ def handle_activation(customerEmail, inventoryItemId, userIp, userCountry, expec
             esim_profile = activation_data.get('esimProfile')
             if esim_profile:
                 activation_code = esim_profile.get('activationCode')
+                installation_url = esim_profile.get('installationUrl')
                 logger.info(f"Activation code received: {activation_code}")
+                logger.info(f"Installation URL received: {installation_url}")
                 qr_img = generate_qr_code(activation_code)
-                send_activation_email(user.email, qr_img, activation_code)
+                send_activation_email(user.email, qr_img, activation_code, installation_url)
             else:
                 logger.error("No eSIM profile returned in activation response.")
         else:
@@ -113,7 +115,7 @@ def generate_qr_code(data):
     return buf
 
 
-def send_activation_email(email, qr_img, activation_code):
+def send_activation_email(email, qr_img, activation_code, installation_url):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     template_path = os.path.join(current_dir, 'Resources/activation_email.html')
 
@@ -121,7 +123,7 @@ def send_activation_email(email, qr_img, activation_code):
         html_content = file.read()
 
     html_content = html_content.replace('{{activation_code}}', activation_code)
-    html_content = html_content.replace('{{activation_link}}', activation_code)  
+    html_content = html_content.replace('{{activation_link}}', installation_url)  
 
     email_data = {
         "from": EMAIL_FROM,
