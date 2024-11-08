@@ -10,6 +10,7 @@ from config import config
 
 from API.extensions import db
 from API.Auth.models import UserModel
+from API.Store.models import SimModel
 
 mailgunAPIKey = config.Config.MAILGUN_API
 EMAIL_FROM = config.Config.EMAIL_FROM
@@ -93,18 +94,32 @@ def handle_activation(customerEmail, inventoryItemId, userIp, userCountry, expec
             if esim_profile:
                 activation_code = esim_profile.get('activationCode')
                 installation_url = esim_profile.get('installationUrl')
+                iccid = esim_profile.get('iccid')
+                imsi = esim_profile.get('imsi')
+                eid = esim_profile.get('eid')
                 logger.info(f"Activation code received: {activation_code}")
                 logger.info(f"Installation URL received: {installation_url}")
-                qr_img = generate_qr_code(activation_code)
-                send_activation_email(user.email, qr_img, activation_code, installation_url)
-            else:
-                logger.error("No eSIM profile returned in activation response.")
+
+                new_activation = SimModel(
+                user_id=user.id,
+                activation_code=activation_code,
+                installation_url=installation_url,
+                status='NOT ACTIVATED', 
+                iccid=iccid,
+                imsi=imsi,
+                eid=eid,
+            )
+            db.session.add(new_activation)
+            db.session.commit()
+
+            qr_img = generate_qr_code(activation_code)
+            send_activation_email(user.email, qr_img, activation_code, installation_url)
         else:
-            logger.error(f"Activation failed: {response.text}")
-            raise Exception(f'Activation failed: {response.text}')
+            logger.error("No eSIM profile returned in activation response.")
     else:
-        logger.error(f"User with email {customerEmail} not found.")
-        return
+        logger.error(f"Activation failed: {response.text}")
+        raise Exception(f'Activation failed: {response.text}')
+
 
 
 def generate_qr_code(data):

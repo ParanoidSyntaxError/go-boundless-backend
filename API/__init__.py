@@ -7,6 +7,8 @@ from flask_smorest import Api
 from passlib.hash import pbkdf2_sha256
 from blocklist import BLOCKLIST
 from dotenv import load_dotenv
+from flask_migrate import Migrate
+
 
 from API.extensions import db, jwt, limiter 
 from API.Auth import UsersBlueprint, UserModel
@@ -46,6 +48,8 @@ def create_flask_app(db_url=None):
     db.init_app(app)
     jwt.init_app(app)
     limiter.init_app(app)
+
+    migrate = Migrate(app, db)
 
     api = Api(app)
 

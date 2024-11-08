@@ -88,14 +88,17 @@ class UserRegister(MethodView):
         if UserModel.query.filter(UserModel.email == user_data["email"]).first():
             abort(409, message="Your email is already registered")
 
-        birthdate = user_data.get("birthdate")
+        
         marketing_emails = user_data.get("marketing_emails", False)
+        birthdate = user_data.get("birthdate", "").strip()
 
         if birthdate:
-            try:
-                birthdate = datetime.strptime(birthdate, "%Y-%m-%d").date()
-            except ValueError:
-                abort(400, message="Invalid birthdate format. Use YYYY-MM-DD.")
+          try:
+            birthdate = datetime.strptime(birthdate, "%Y-%m-%d").date()
+          except ValueError:
+            abort(400, message="Invalid birthdate format. Use YYYY-MM-DD.")
+        else:
+            birthdate = None
 
         verification_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         verification_code_expiry = datetime.utcnow() + timedelta(minutes=15)

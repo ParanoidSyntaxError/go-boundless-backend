@@ -9,6 +9,7 @@ from requests.auth import HTTPBasicAuth
 import json 
 from API.Store.service import handle_activation 
 from API.Store.store_auth import get_store_access_token
+from API.Store.models import SimModel
 import logging
 
 ## TO DO - Switch to post requests
@@ -293,7 +294,7 @@ def create_payment_intent():
             payment_method=payment_method_id,
             confirmation_method='manual',
             confirm=True,
-            return_url='http://localhost:5173/payment-success',
+            return_url='https://goboundlessnow.com/payment-success',
             metadata={
                 'inventoryItemId': inventoryItemId,
                 'customerEmail': customerEmail,
@@ -348,3 +349,53 @@ def stripe_webhook():
         print('Unhandled event type {}'.format(event['type']))
 
     return jsonify(success=True), 200
+
+@blp.route('/pending-activations', methods=['POST'])
+@jwt_required()
+def get_pending_activations():
+    user_id = get_jwt_identity()
+    user = UserModel.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    activation = SimModel.query.filter_by(user_id=user_id).order_by(SimModel.created_at.desc()).first()
+
+    if not activation:
+        return jsonify({"error": "No pending activations found"}), 404
+
+    activation_data = {
+        'id': activation.id,
+        'activation_code': activation.activation_code,
+        'installation_url': activation.installation_url,
+        'status': activation.status,
+        'created_at': activation.created_at.isoformat(),
+    }
+
+    return jsonify(activation_data), 200
+
+@blp.route('/gigastore-webhook/esim-status', methods=['POST'])
+def esim_status_webhook():
+    data = request.get_json()
+
+    iccid = data.get('iccid')
+    imsi = data.get('imsi')
+    profile_state = data.get('profileState')
+    eid = data.get('eid')
+
+    if not iccid or not imsi or not profile_state:
+        logger.error("Missing required fields in webhook payload.")
+        return jsonify({"error": "Missing required fields"}), 400
+
+    activation = SimModel.query.filter_by(iccid=iccid).first()
+
+    if not activation:
+        logger.error(f"Activation with ICCID {iccid} not found.")
+        return jsonify({"error": "Activation not found"}), 404
+    
+    activation.status = profile_state.upper() 
+    db.session.commit()
+    logger.info(f"Activation status updated to {activation.status} for ICCID {iccid}.")
+
+    return jsonify({"message": "Activation status updated"}), 200
+

@@ -11,7 +11,7 @@
       .verification-code {
         display: inline-block;
         background-color: #b3ff4a;
-        color: white;
+        color: black;
         padding: 15px 30px;
         margin: 20px 0;
         font-size: 24px;
@@ -23,6 +23,16 @@
         margin-top: 20px;
         font-size: 0.8em;
         color: #666666;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .email-body,
+        .footer {
+          color: #e4e4e4;
+        }
+        .verification-code {
+          background-color: #3d9400;
+        }
       }
     </style>
   </head>
