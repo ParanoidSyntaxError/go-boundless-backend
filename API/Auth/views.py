@@ -371,6 +371,39 @@ class VerifyCode(MethodView):
 class ResendVerificationCode(MethodView):
     @limiter.limit("3 per hour")
     def post(self):
+        """
+        Resend a new verification code to the user's email.
+
+        ---
+        tags:
+          - Authentication
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - email
+                properties:
+                  email:
+                    type: string
+                    format: email
+                    example: "user@example.com"
+        responses:
+          200:
+            description: Verification code resent successfully.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: "A new verification code has been sent to your email."
+          404:
+            description: User not found.
+        """
         data = request.get_json()
         email = data.get('email')
 

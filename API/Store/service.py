@@ -2,6 +2,8 @@ import logging
 import qrcode
 import io
 import requests 
+from config.config import Config
+
 import os
 from API.Store.store_auth import get_store_access_token
 
@@ -18,10 +20,12 @@ EMAIL_FROM = config.Config.EMAIL_FROM
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
+now_payment_api_key = Config.NOW_PAYMENT_API_KEY
+now_payment_link = Config.NOW_PAYMENT_API_LINK
+dent_link = Config.DENT_LINK
 
 def activate_existing_customer(user, inventoryItemId, userIp, userCountry, expectedPrice, customerUid):
-    url = 'https://api.giga.store/gigastore/activations/top-up-with-profile'
+    url = f'{dent_link}/gigastore/activations/top-up-with-profile'
     headers = {
         'Authorization': f'Bearer {get_store_access_token()}',
         'Content-Type': 'application/json',
@@ -38,7 +42,7 @@ def activate_existing_customer(user, inventoryItemId, userIp, userCountry, expec
     return response
 
 def activate_new_customer(user, inventoryItemId, userIp, userCountry, expectedPrice):
-    url = 'https://api.giga.store/gigastore/activations/register'
+    url = f'{dent_link}/gigastore/activations/register'
     headers = {
         'Authorization': f'Bearer {get_store_access_token()}',
         'Content-Type': 'application/json',
@@ -157,3 +161,47 @@ def send_activation_email(email, qr_img, activation_code, installation_url):
     )
 
     return response
+    
+
+# def get_estimated_price(amount, currency_from='usd', currency_to='btc'):
+#     headers = {
+#         'x-api-key': now_payment_api_key,
+#     }
+#     params = {
+#         'amount': amount,
+#         'currency_from': currency_from,
+#         'currency_to': currency_to,
+#     }
+#     response = requests.get(f'{now_payment_link}/estimate', headers=headers, params=params)
+#     return response.json()
+
+# def get_minimum_payment_amount(currency_from, currency_to='usd'):
+#     headers = {
+#         'x-api-key': now_payment_api_key,
+#     }
+#     params = {
+#         'currency_from': currency_from,
+#         'currency_to': currency_to,
+#     }
+#     response = requests.get(f'{now_payment_link}/min-amount', headers=headers, params=params)
+#     return response.json()
+
+def create_payment_invoice(amount, currency, ipn_callback_url, success_url, cancel_url):
+    payment_data = {
+        "price_amount": amount,
+        "price_currency": currency,
+        "ipn_callback_url": ipn_callback_url,
+        "success_url": success_url,
+        "cancel_url": cancel_url
+    }
+
+    headers = {
+        "x-api-key": now_payment_api_key,
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(f'{now_payment_link}/v1/invoice', json=payment_data, headers=headers)
+    if response.status_code == 200:
+        return response.json()  # Returns the response containing the invoice_url
+    else:
+        return None
