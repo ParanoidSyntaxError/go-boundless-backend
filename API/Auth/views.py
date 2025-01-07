@@ -10,7 +10,7 @@ import bcrypt
 import random
 import string
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from API.extensions import db, limiter
 from blocklist import BLOCKLIST 
@@ -503,28 +503,23 @@ class ForgotPassword(MethodView):
                 description: Too Many Requests - Please wait before retrying
             """
         json_data = request.get_json()
-        email = json_data.get('email')
+        email = json_data.get("email")
 
         if not email:
             return jsonify({"message": "Email is required."}), 400
 
         user = UserModel.query.filter_by(email=email).first()
+
         if not user:
-            
-            return jsonify({"message": "If an account with that email exists, a password reset link has been sent."}), 200
+            return jsonify({
+                "message": "If an account with that email exists, "
+                           "a password reset link has been sent."
+            }), 200
 
-        current_time = datetime.now(datetime.timezone.utc)
-
-        if user.last_password_email_time:
-            time_since_last_email = current_time - user.last_password_email_time
-            if time_since_last_email < timedelta(minutes=1):
-                wait_time = 60 - int(time_since_last_email.total_seconds())
-                return jsonify({"message": f"Please wait {wait_time} seconds before requesting another password reset."}), 429
-
+        reset_token = secrets.token_urlsafe(16)  
+        user.reset_password_token = reset_token
         
-        user.reset_password_token = secrets.token_urlsafe(32)
-        user.reset_password_token_expiry = current_time + timedelta(hours=1)  
-        user.last_password_email_time = current_time
+        user.reset_password_token_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
         db.session.commit()
 
         
