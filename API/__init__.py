@@ -44,6 +44,13 @@ def create_flask_app(db_url=None):
         "OPENAPI_SWAGGER_UI_URL"
     ] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
 
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_size': 10,
+        'max_overflow': 5,
+        'pool_timeout': 30,
+        'pool_recycle': 1800
+    }
 
     db.init_app(app)
     jwt.init_app(app)
