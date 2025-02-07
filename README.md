@@ -48,6 +48,13 @@ NOW_PAYMENT_API_LINK=
 DENT_LINK=
 ```
 
+Create a `.flaskenv` file in the root directory of the project and define the following variables: 
+
+```bash
+FLASK_APP=main.py
+FLASK_DEBUG=1
+```
+
 ## Installation
 
 Clone the Repo:
