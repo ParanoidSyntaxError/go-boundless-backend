@@ -15,3 +15,10 @@ class SimModel(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
     user = db.relationship('UserModel', backref=db.backref('activations', lazy=True))
+
+class PromoModel(db.Promo):
+    __tablename__ = 'promos'
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(255), nullable=False)
+    value = db.Column(db.Float, nullable=False)

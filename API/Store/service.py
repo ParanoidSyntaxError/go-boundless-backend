@@ -41,6 +41,23 @@ def activate_existing_customer(user, inventoryItemId, userIp, userCountry, expec
     response = requests.post(url, headers=headers, json=payload)
     return response
 
+def activate_existing_customer_new_profile(user, inventoryItemId, userIp, userCountry, expectedPrice, customerUid):
+    url = f'{dent_link}/gigastore/activations/top-up'
+    headers = {
+        'Authorization': f'Bearer {get_store_access_token()}',
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        'inventoryItemId': inventoryItemId,
+        'metatag': 'Paid via Stripe',
+        'customerUid': customerUid or user.dent_uid,
+        'userIp': userIp,
+        'userCountry': userCountry,
+        'expectedPrice': expectedPrice,
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    return response
+
 def activate_new_customer(user, inventoryItemId, userIp, userCountry, expectedPrice):
     url = f'{dent_link}/gigastore/activations/register'
     headers = {
@@ -59,7 +76,7 @@ def activate_new_customer(user, inventoryItemId, userIp, userCountry, expectedPr
     return response
 
 
-def handle_activation(customerEmail, inventoryItemId, userIp, userCountry, expectedPrice, customerUid):
+def handle_activation(customerEmail, inventoryItemId, userIp, userCountry, expectedPrice, customerUid, isNewItem):
     logger.info(f"Starting activation for email: {customerEmail}, inventoryItemId: {inventoryItemId}")
 
     user = UserModel.query.filter_by(email=customerEmail).first()
@@ -82,15 +99,26 @@ def handle_activation(customerEmail, inventoryItemId, userIp, userCountry, expec
                 logger.error(f"Activation failed: {response.text}")
                 raise Exception(f'Activation failed: {response.text}')
         else:
-            response = activate_existing_customer(
-                user,
-                inventoryItemId,
-                userIp,
-                userCountry,
-                expectedPrice,
-                customerUid
-            )
-            logger.info(f"Response from activate_existing_customer: {response.status_code}, {response.text}")
+            if isNewItem:
+                response = activate_existing_customer_new_profile(
+                    user,
+                    inventoryItemId,
+                    userIp,
+                    userCountry,
+                    expectedPrice,
+                    customerUid
+                    )
+                logger.info(f"Response from activate_existing_customer_new_profile: {response.status_code}, {response.text}")
+            else:
+                response = activate_existing_customer(
+                    user,
+                    inventoryItemId,
+                    userIp,
+                    userCountry,
+                    expectedPrice,
+                    customerUid
+                )
+                logger.info(f"Response from activate_existing_customer: {response.status_code}, {response.text}")
 
         if response.status_code == 200:
             activation_data = response.json()
@@ -105,14 +133,14 @@ def handle_activation(customerEmail, inventoryItemId, userIp, userCountry, expec
                 logger.info(f"Installation URL received: {installation_url}")
 
                 new_activation = SimModel(
-                user_id=user.id,
-                activation_code=activation_code,
-                installation_url=installation_url,
-                status='NOT ACTIVATED', 
-                iccid=iccid,
-                imsi=imsi,
-                eid=eid,
-            )
+                    user_id=user.id,
+                    activation_code=activation_code,
+                    installation_url=installation_url,
+                    status='NOT ACTIVATED', 
+                    iccid=iccid,
+                    imsi=imsi,
+                    eid=eid,
+                )
             db.session.add(new_activation)
             db.session.commit()
 
@@ -161,19 +189,19 @@ def send_activation_email(email, qr_img, activation_code, installation_url):
     )
 
     return response
-    
 
-# def get_estimated_price(amount, currency_from='usd', currency_to='btc'):
-#     headers = {
-#         'x-api-key': now_payment_api_key,
-#     }
-#     params = {
-#         'amount': amount,
-#         'currency_from': currency_from,
-#         'currency_to': currency_to,
-#     }
-#     response = requests.get(f'{now_payment_link}/estimate', headers=headers, params=params)
-#     return response.json()
+
+def get_estimated_price(amount, currency_from='usd', currency_to='btc'):
+     headers = {
+         'x-api-key': now_payment_api_key,
+     }
+     params = {
+         'amount': amount,
+         'currency_from': currency_from,
+         'currency_to': currency_to,
+     }
+     response = requests.get(f'{now_payment_link}/estimate', headers=headers, params=params)
+     return response.json()
 
 # def get_minimum_payment_amount(currency_from, currency_to='usd'):
 #     headers = {

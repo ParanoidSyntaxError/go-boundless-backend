@@ -9,7 +9,7 @@ from requests.auth import HTTPBasicAuth
 import json 
 from API.Store.service import handle_activation,  create_payment_invoice
 from API.Store.store_auth import get_store_access_token
-from API.Store.models import SimModel
+from API.Store.models import PromoModel, SimModel
 import logging
 
 ## TO DO - Switch to post requests
@@ -275,6 +275,19 @@ def get_countries():
 
 ## PAYMENTS
 
+@blp.route('/validate-promo', methods=['GET'])
+def validate_promo():
+    code = request.args.get('code', '')
+    try:
+        promo = PromoModel.query.filter_by(code=code).first()
+        if not promo:
+            return jsonify({"error": "Promo not found"}), 404
+            
+        return jsonify({"id": promo.id, "value": promo.value}), 200
+    except Exception as e:
+        return jsonify(error=str(e)), 403
+    
+
 @blp.route('/create-payment-intent', methods=['POST'])
 def create_payment_intent():
     data = request.get_json()
@@ -288,6 +301,8 @@ def create_payment_intent():
         userCountry = data.get('userCountry', '')
         expectedPrice = data.get('expectedPrice', {})
         customerUid = data.get('customerUid', '') 
+
+        isNewItem = data.get('isNewItem', True)
 
         intent = stripe.PaymentIntent.create(
             amount=amount,
@@ -303,6 +318,7 @@ def create_payment_intent():
                 'userCountry': userCountry,
                 'expectedPrice': json.dumps(expectedPrice), 
                 'customerUid': customerUid,
+                'isNewItem': isNewItem,
             },
         )
 
@@ -336,8 +352,10 @@ def stripe_webhook():
         expectedPrice = json.loads(expectedPrice_str)
         customerUid = metadata.get('customerUid', '')
 
+        isNewItem = metadata.get('isNewItem', True)
+
         try:
-            handle_activation(customerEmail, inventoryItemId, userIp, userCountry, expectedPrice, customerUid)
+            handle_activation(customerEmail, inventoryItemId, userIp, userCountry, expectedPrice, customerUid, isNewItem)
         except Exception as e:
             logger.exception("Activation error")
             return jsonify(success=False), 500
