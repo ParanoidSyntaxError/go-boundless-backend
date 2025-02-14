@@ -13,6 +13,7 @@ from config import config
 from API.extensions import db
 from API.Auth.models import UserModel
 from API.Store.models import SimModel
+from API.Store.models import PromoModel
 
 mailgunAPIKey = config.Config.MAILGUN_API
 EMAIL_FROM = config.Config.EMAIL_FROM
@@ -190,8 +191,10 @@ def send_activation_email(email, qr_img, activation_code, installation_url):
 
     return response
 
+def get_promo(code):
+    return PromoModel.query.filter_by(code=code).first()
 
-def get_estimated_price(amount, currency_from='usd', currency_to='btc'):
+def get_estimated_price(amount, currency_from='usd', currency_to='btc', code=''):
      headers = {
          'x-api-key': now_payment_api_key,
      }
@@ -201,7 +204,14 @@ def get_estimated_price(amount, currency_from='usd', currency_to='btc'):
          'currency_to': currency_to,
      }
      response = requests.get(f'{now_payment_link}/estimate', headers=headers, params=params)
-     return response.json()
+     estimated_price = response.json()
+    
+     estimated_price.promo_amount = estimated_price.estimated_amount
+     promo = get_promo(code)
+     if promo:
+         estimated_price.promo_amount = estimated_price.estimated_amount - (promo.value * estimated_price.estimated_amount)
+    
+     return estimated_price
 
 # def get_minimum_payment_amount(currency_from, currency_to='usd'):
 #     headers = {

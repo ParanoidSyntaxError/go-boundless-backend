@@ -7,7 +7,7 @@ from flask_smorest import Blueprint, abort
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from requests.auth import HTTPBasicAuth 
 import json 
-from API.Store.service import handle_activation,  create_payment_invoice
+from API.Store.service import get_promo, get_estimated_price, handle_activation,  create_payment_invoice
 from API.Store.store_auth import get_store_access_token
 from API.Store.models import PromoModel, SimModel
 import logging
@@ -279,7 +279,7 @@ def get_countries():
 def validate_promo():
     code = request.args.get('code', '')
     try:
-        promo = PromoModel.query.filter_by(code=code).first()
+        promo = get_promo(code)
         if not promo:
             return jsonify({"error": "Promo not found"}), 404
             
@@ -432,6 +432,19 @@ def get_available_currencies():
     response = requests.get(f'{now_payment_link}/currencies?fixed_rate=true', headers=headers)
     return response.json()
 
+@blp.route('/estimated-price', methods=['POST'])
+def estimated_price_route():
+    data = request.get_json()
+    amount = data['amount']
+    promo = data.get('promo', '')
+    currency_from = data.get('currency_from', 'usd')
+    currency_to = data['currency_to']
+    estimated_price = get_estimated_price(amount, currency_from, currency_to, promo)
+    if 'estimated_amount' in estimated_price:
+        return jsonify(estimated_price), 200
+    else:
+        return jsonify(error='Failed to fetch estimated price'), 400
+
 # @blp.route('/minimum-payment-amount', methods=['POST'])
 # def minimum_payment_amount_route():
 #     data = request.get_json()
@@ -442,18 +455,6 @@ def get_available_currencies():
 #         return jsonify(min_amount_data), 200
 #     else:
 #         return jsonify(error='Failed to fetch minimum payment amount'), 400
-
-# @blp.route('/estimated-price', methods=['POST'])
-# def estimated_price_route():
-#     data = request.get_json()
-#     amount = data['amount']
-#     currency_from = data.get('currency_from', 'usd')
-#     currency_to = data['currency_to']
-#     estimated_price = get_estimated_price(amount, currency_from, currency_to)
-#     if 'estimated_amount' in estimated_price:
-#         return jsonify(estimated_price), 200
-#     else:
-#         return jsonify(error='Failed to fetch estimated price'), 400
 
 # Comment out if using IPN logic instead
 # @blp.route('/get-payment-status/<payment_id>', methods=['GET'])
